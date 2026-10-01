@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Didático: A Física dos Raios</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.35);
+        }
+
+        .glow-amber {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+        }
+
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.35);
+        }
+
+        /* Screen shake animation for thunder strike */
+        @keyframes shake {
+            0% { transform: translate(0, 0); }
+            20% { transform: translate(-8px, 6px); }
+            40% { transform: translate(8px, -6px); }
+            60% { transform: translate(-5px, 4px); }
+            80% { transform: translate(5px, -2px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        .shake-effect {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-2 md:p-6 text-slate-100">
+
+    <!-- Top Header -->
+    <header class="max-w-7xl w-full mx-auto mb-4 flex flex-col sm:flex-row justify-between items-center gap-4 glass-panel p-4 rounded-2xl">
+        <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-xl sm:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-300 to-amber-300">
+                    Como Funcionam os Raios na Natureza
+                </h1>
+                <p class="text-xs sm:text-sm text-slate-400">Entenda o passo a passo de como o raio se forma de jeito simples!</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- Sound Toggle Button -->
+            <button id="soundToggleBtn" onclick="toggleSound()" class="flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition-all">
+                <span id="soundIcon">🔊</span>
+                <span id="soundText">Som: Ativado</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Simulation Grid -->
+    <main id="mainContainer" class="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1">
+        
+        <!-- Left Section: Interactive Canvas & Canvas Controls (8 Columns) -->
+        <section class="lg:col-span-8 flex flex-col gap-4">
+            
+            <!-- Step Navigation Pills -->
+            <div class="grid grid-cols-5 gap-1.5 sm:gap-2 p-1.5 glass-panel rounded-2xl">
+                <button onclick="setStep(1)" id="stepBtn1" class="step-btn py-2 px-1 text-center rounded-xl text-xs font-semibold transition-all duration-300 border border-transparent">
+                    <span class="block text-[10px] opacity-75">Passo 1</span>
+                    <span class="truncate block">Atrito</span>
+                </button>
+                <button onclick="setStep(2)" id="stepBtn2" class="step-btn py-2 px-1 text-center rounded-xl text-xs font-semibold transition-all duration-300 border border-transparent">
+                    <span class="block text-[10px] opacity-75">Passo 2</span>
+                    <span class="truncate block">Cargas</span>
+                </button>
+                <button onclick="setStep(3)" id="stepBtn3" class="step-btn py-2 px-1 text-center rounded-xl text-xs font-semibold transition-all duration-300 border border-transparent">
+                    <span class="block text-[10px] opacity-75">Passo 3</span>
+                    <span class="truncate block">O Chão</span>
+                </button>
+                <button onclick="setStep(4)" id="stepBtn4" class="step-btn py-2 px-1 text-center rounded-xl text-xs font-semibold transition-all duration-300 border border-transparent">
+                    <span class="block text-[10px] opacity-75">Passo 4</span>
+                    <span class="truncate block">Canal de Ar</span>
+                </button>
+                <button onclick="setStep(5)" id="stepBtn5" class="step-btn py-2 px-1 text-center rounded-xl text-xs font-semibold transition-all duration-300 border border-transparent">
+                    <span class="block text-[10px] opacity-75">Passo 5</span>
+                    <span class="truncate block">O Raio!</span>
+                </button>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative glass-panel rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl group">
+                <canvas id="simCanvas" class="w-full h-[380px] sm:h-[480px] block cursor-crosshair bg-slate-950"></canvas>
+                
+                <!-- Canvas Overlay Instructions -->
+                <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 text-[11px] text-slate-300 px-3 py-1.5 rounded-lg pointer-events-none flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                    <span>Clique em qualquer ponto do chão para escolher onde o raio vai cair</span>
+                </div>
+
+                <!-- Canvas Control Bar (Bottom Overlay) -->
+                <div class="absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 bg-slate-900/85 backdrop-blur-md p-2.5 rounded-xl border border-slate-700/50">
+                    <div class="flex items-center gap-2">
+                        <button onclick="prevStep()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 transition text-xs font-semibold flex items-center gap-1">
+                            ◀ Voltar
+                        </button>
+                        <button onclick="nextStep()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 transition text-xs font-semibold flex items-center gap-1">
+                            Avançar ▶
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button id="autoPlayBtn" onclick="toggleAutoPlay()" class="px-3.5 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-lg">
+                            <span>▶</span>
+                            <span id="autoPlayText">Reprodução Automática</span>
+                        </button>
+
+                        <button onclick="triggerManualStrike()" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 rounded-lg text-xs font-bold transition shadow-lg flex items-center gap-1">
+                            ⚡ Disparar Raio
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Section: Explanations & Metrics (4 Columns) -->
+        <section class="lg:col-span-4 flex flex-col gap-4">
+            
+            <!-- Physics Step Card -->
+            <div class="glass-panel p-5 rounded-2xl border border-slate-700/50 flex flex-col gap-4 min-h-[380px]">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span id="stepBadge" class="text-xs font-bold font-mono px-2.5 py-1 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                        ETAPA 1 DE 5
+                    </span>
+                    <span id="physicsStatus" class="text-xs text-amber-400 font-mono flex items-center gap-1">
+                        ● Vento e Batidas
+                    </span>
+                </div>
+
+                <div>
+                    <h2 id="stepTitle" class="text-xl font-bold text-slate-100 mb-2">
+                        1. As Nuvens se Esfregam!
+                    </h2>
+                    <p id="stepDescription" class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                        Dentro da nuvem de tempestade, ventos fortes fazem pedacinhos de gelo e gotas d'água se chocarem sem parar. Esse atrito gera eletricidade estática, igual a quando você esfrega uma bexiga no cabelo!
+                    </p>
+                </div>
+
+                <!-- Dynamic Physics Indicators Grid -->
+                <div class="grid grid-cols-2 gap-2.5 my-1">
+                    <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Força Elétrica</span>
+                        <span id="metricVoltage" class="text-sm font-bold font-mono text-cyan-400">~0 Volts</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Pressão Elétrica</span>
+                        <span id="metricEField" class="text-sm font-bold font-mono text-cyan-400">Baixa</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Temperatura do Ar</span>
+                        <span id="metricTemp" class="text-sm font-bold font-mono text-amber-400">-15 °C a -40 °C</span>
+                    </div>
+                    <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Estado do Ar</span>
+                        <span id="metricAirState" class="text-sm font-bold font-mono text-emerald-400">Ar Normal (Isolante)</span>
+                    </div>
+                </div>
+
+                <!-- Key Takeaway Box -->
+                <div class="bg-gradient-to-r from-slate-900 to-cyan-950/30 p-3 rounded-xl border border-cyan-500/20">
+                    <h3 class="text-xs font-bold text-cyan-300 mb-1 flex items-center gap-1.5">
+                        💡 Conceito Chave:
+                    </h3>
+                    <p id="stepKeyTakeaway" class="text-xs text-slate-300">
+                        Eletricidade por Atrito: Quando materiais se esfregam, eles acumulam cargas elétricas.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Did You Know / Extra Information Box -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-700/50 text-xs text-slate-400 flex items-start gap-3">
+                <span class="text-xl">⛈️</span>
+                <div>
+                    <h4 class="font-semibold text-slate-200 mb-0.5">Você sabia?</h4>
+                    <p id="triviaText">A nuvem funciona como um gerador gigante de eletricidade estática movido a vento!</p>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <script>
+        // Global Simulation State
+        let currentStep = 1;
+        let isAutoPlaying = false;
+        let autoPlayTimer = null;
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        // Canvas Setup
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        // Animation Particles & Logic
+        let particles = [];
+        let charges = [];
+        let steppedLeader = [];
+        let upwardStreamers = [];
+        let strikeTarget = { x: 0, y: 0 };
+        let dischargeFlash = 0;
+        let shockwaves = [];
+        let animationFrameId = null;
+
+        // Content Data for 5 Stages (Simplified for teenagers)
+        const stepData = {
+            1: {
+                badge: "ETAPA 1 DE 5",
+                title: "1. As Nuvens se Esfregam!",
+                status: "● Vento e Atrito",
+                statusColor: "text-amber-400",
+                description: "Dentro da nuvem de tempestade, ventos fortes fazem pedacinhos de gelo e gotas d'água se chocarem sem parar. Esse atrito gera eletricidade estática, igual a quando você esfrega uma bexiga no cabelo!",
+                voltage: "~0 Volts",
+                eField: "Baixa",
+                temp: "-15 °C a -40 °C",
+                airState: "Ar Normal (Isolante)",
+                airStateColor: "text-emerald-400",
+                takeaway: "Eletricidade por Atrito: Esfregar coisas faz com que elas ganhem ou percam cargas elétricas.",
+                trivia: "A nuvem funciona como um gerador gigante de eletricidade estática movido pelo próprio vento!"
+            },
+            2: {
+                badge: "ETAPA 2 DE 5",
+                title: "2. Cargas Positivas e Negativas",
+                status: "● Nuvem Carregada",
+                statusColor: "text-cyan-400",
+                description: "Os cristais de gelo mais leves (com cargas +) sobem para o topo da nuvem, enquanto o gelo pesado (com cargas -) cai para a base. A nuvem fica dividida em duas partes elétricas!",
+                voltage: "~50 a 100 Milhões V",
+                eField: "Média",
+                temp: "-20 °C",
+                airState: "Ar Sob Tensão",
+                airStateColor: "text-emerald-400",
+                takeaway: "Bateria Gigante: A nuvem virou uma grande bateria natural, cheia de carga positiva no topo e negativa embaixo.",
+                trivia: "A base da nuvem acumula tantas cargas negativas que começa a empurrar as cargas negativas do chão para longe!"
+            },
+            3: {
+                badge: "ETAPA 3 DE 5",
+                title: "3. O Chão Reage!",
+                status: "● Chão Atraído",
+                statusColor: "text-amber-300",
+                description: "As cargas negativas no fundo da nuvem empurram as cargas negativas do chão para bem fundo na terra. Assim, a superfície do solo, árvores e casas ficam cheias de cargas positivas (+).",
+                voltage: "~200+ Milhões V",
+                eField: "Alta",
+                temp: "25 °C (Superfície)",
+                airState: "Ar Focado",
+                airStateColor: "text-amber-400",
+                takeaway: "Cargas Opostas se Atraem: O chão perde cargas negativas e fica 'faminto' para se conectar com a nuvem.",
+                trivia: "Objetos altos e pontudos, como árvores e para-raios, concentram ainda mais cargas positivas no topo!"
+            },
+            4: {
+                badge: "ETAPA 4 DE 5",
+                title: "4. O Ar Virando Ponte",
+                status: "● Ar Quebrando",
+                statusColor: "text-purple-400",
+                description: "A força elétrica fica tão gigante que consegue 'quebrar' o ar. Um caminho elétrico invisível desce da nuvem em zigue-zague, enquanto pequenas faíscas sobem do chão para encontrá-lo.",
+                voltage: "> 300 Milhões V",
+                eField: "Extrema",
+                temp: "3.000 °C (No Canal)",
+                airState: "Virando Plasma",
+                airStateColor: "text-purple-400",
+                takeaway: "Caminho Elétrico: O ar, que normalmente bloqueia a eletricidade, esquenta tanto que vira um condutor de energia super potente.",
+                trivia: "O caminho desce do céu em passos rápidos de 50 metros, procurando o ponto mais rápido para tocar o chão."
+            },
+            5: {
+                badge: "ETAPA 5 DE 5",
+                title: "5. O Raio e o Trovão!",
+                status: "● RAIO E TROVÃO!",
+                statusColor: "text-red-400",
+                description: "Quando o caminho que vem do céu encontra a faísca que sobe do chão, o circuito se fecha! Uma descarga de energia gigante cruza o ar. Ele esquenta a 30.000 °C num piscar de olhos e se expande com força, criando o trovão!",
+                voltage: "Até 1 Bilhão de Volts",
+                eField: "Máxima",
+                temp: "30.000 °C",
+                airState: "Plasma Brilhante",
+                airStateColor: "text-red-400",
+                takeaway: "Luz e Som: O raio é o clarão super rápido, e o trovão é o barulho do ar se expandindo com o calor absurdo.",
+                trivia: "A luz do raio viaja super rápido (300.000 km/s), mas o som do trovão vem devagarinho (340 m/s). Por isso a gente vê o raio primeiro e só depois ouve o barulho!"
+            }
+        };
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundToggleBtn');
+            const icon = document.getElementById('soundIcon');
+            const text = document.getElementById('soundText');
+
+            if (soundEnabled) {
+                icon.textContent = '🔊';
+                text.textContent = 'Som: Ativado';
+                btn.classList.remove('opacity-50');
+            } else {
+                icon.textContent = '🔇';
+                text.textContent = 'Som: Desativado';
+                btn.classList.add('opacity-50');
+            }
+        }
+
+        // Synthesize realistic thunder sound using white noise and lowpass filter sweeps
+        function playThunderSound() {
+            if (!soundEnabled) return;
+            initAudioContext();
+            if (!audioCtx) return;
+
+            try {
+                const bufferSize = audioCtx.sampleRate * 2.8;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+
+                // Generate noise with burst envelopes for thunder crackle
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.7));
+                }
+
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+
+                // Lowpass filter sweep for booming low-frequency rumble
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 2.2);
+
+                const gain = audioCtx.createGain();
+                gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.9, audioCtx.currentTime + 0.04);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 2.6);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                noise.start();
+                noise.stop(audioCtx.currentTime + 2.7);
+            } catch (e) {
+                console.error("Audio playback error:", e);
+            }
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            width = container.clientWidth;
+            height = container.clientHeight;
+            
+            // DPR handling for crisp rendering
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+
+            // Default target at center tree tip
+            strikeTarget = { x: width * 0.5, y: height - 60 };
+
+            initParticles();
+        }
+
+        function initParticles() {
+            particles = [];
+            charges = [];
+
+            // Cloud boundary coordinates
+            const cloudTop = 40;
+            const cloudBottom = 170;
+
+            // Step 1 & 2 Particles (Ice & Water Droplets)
+            for (let i = 0; i < 90; i++) {
+                particles.push({
+                    x: Math.random() * (width - 100) + 50,
+                    y: Math.random() * (cloudBottom - cloudTop) + cloudTop,
+                    vx: (Math.random() - 0.5) * 2.5,
+                    vy: (Math.random() - 0.5) * 2.5,
+                    radius: Math.random() * 3.5 + 2,
+                    type: Math.random() > 0.5 ? 'ice' : 'water',
+                    charge: Math.random() > 0.5 ? '+' : '-'
+                });
+            }
+
+            // Charge indicators (+ and -)
+            for (let i = 0; i < 40; i++) {
+                charges.push({
+                    x: Math.random() * (width - 120) + 60,
+                    y: Math.random() * (cloudBottom - cloudTop) + cloudTop,
+                    type: i < 20 ? '+' : '-',
+                    targetY: i < 20 ? cloudTop + 25 : cloudBottom - 25,
+                    pulse: Math.random() * Math.PI
+                });
+            }
+        }
+
+        function generateLightningPath(startX, startY, endX, endY, iterations = 5) {
+            let points = [{ x: startX, y: startY }, { x: endX, y: endY }];
+            
+            for (let i = 0; i < iterations; i++) {
+                let newPoints = [];
+                for (let j = 0; j < points.length - 1; j++) {
+                    let p1 = points[j];
+                    let p2 = points[j + 1];
+                    let midX = (p1.x + p2.x) / 2;
+                    let midY = (p1.y + p2.y) / 2;
+
+                    let offset = (Math.random() - 0.5) * (width * 0.08) / (i + 1);
+                    newPoints.push(p1);
+                    newPoints.push({ x: midX + offset, y: midY });
+                }
+                newPoints.push(points[points.length - 1]);
+                points = newPoints;
+            }
+            return points;
+        }
+
+        function drawBackground() {
+            // Dark stormy sky gradient
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+            bgGrad.addColorStop(0, '#0a0d18');
+            bgGrad.addColorStop(0.6, '#0f172a');
+            bgGrad.addColorStop(1, '#1e293b');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function drawCloud() {
+            const cloudY = 110;
+            ctx.save();
+            
+            // Base cloud glow depending on charge state
+            if (currentStep >= 2) {
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = currentStep >= 4 ? 'rgba(168, 85, 247, 0.4)' : 'rgba(6, 182, 212, 0.3)';
+            }
+
+            ctx.fillStyle = '#1e293b';
+            
+            // Draw multi-lobed Cumulonimbus cloud
+            ctx.beginPath();
+            ctx.arc(width * 0.2, cloudY + 10, 50, 0, Math.PI * 2);
+            ctx.arc(width * 0.35, cloudY - 25, 75, 0, Math.PI * 2);
+            ctx.arc(width * 0.5, cloudY - 35, 90, 0, Math.PI * 2);
+            ctx.arc(width * 0.68, cloudY - 20, 75, 0, Math.PI * 2);
+            ctx.arc(width * 0.82, cloudY + 10, 55, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Darker base of the storm cloud
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.ellipse(width * 0.5, cloudY + 45, width * 0.42, 35, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawTerrain() {
+            const groundY = height - 50;
+
+            // Rolling Hills Background
+            ctx.fillStyle = '#062016';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.quadraticCurveTo(width * 0.25, groundY - 30, width * 0.5, groundY - 10);
+            ctx.quadraticCurveTo(width * 0.75, groundY + 10, width, groundY - 20);
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.fill();
+
+            // Foreground Ground
+            ctx.fillStyle = '#02120b';
+            ctx.fillRect(0, groundY, width, 50);
+
+            // Draw Tall Objects (Tree, House, Rod)
+            drawTree(width * 0.2, groundY);
+            drawTree(width * 0.5, groundY - 10); // Center Tree (Primary Target)
+            drawHouse(width * 0.8, groundY - 5);
+        }
+
+        function drawTree(x, y) {
+            // Trunk
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(x - 5, y - 35, 10, 35);
+            // Foliage
+            ctx.fillStyle = '#064e3b';
+            ctx.beginPath();
+            ctx.arc(x, y - 45, 22, 0, Math.PI * 2);
+            ctx.arc(x - 12, y - 35, 15, 0, Math.PI * 2);
+            ctx.arc(x + 12, y - 35, 15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Induced positive charge indicator on tall objects (Step 3+)
+            if (currentStep >= 3) {
+                drawChargeSymbol(x, y - 72, '+', '#f59e0b', true);
+            }
+        }
+
+        function drawHouse(x, y) {
+            // Building body
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(x - 20, y - 25, 40, 25);
+            // Roof
+            ctx.fillStyle = '#7f1d1d';
+            ctx.beginPath();
+            ctx.moveTo(x - 25, y - 25);
+            ctx.lineTo(x, y - 48);
+            ctx.lineTo(x + 25, y - 25);
+            ctx.fill();
+            // Lightning Rod
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x, y - 48);
+            ctx.lineTo(x, y - 62);
+            ctx.stroke();
+
+            if (currentStep >= 3) {
+                drawChargeSymbol(x, y - 72, '+', '#f59e0b', true);
+            }
+        }
+
+        function drawChargeSymbol(x, y, symbol, color, glowing = false) {
+            ctx.save();
+            if (glowing) {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = color;
+            }
+            ctx.fillStyle = color;
+            ctx.font = 'bold 14px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(symbol, x, y);
+            ctx.restore();
+        }
+
+        function updateAndDrawStep1() {
+            // Step 1: Updraft vectors & collisions
+            const cloudTop = 50;
+            const cloudBottom = 160;
+
+            // Draw Wind Updraft Vectors
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+            ctx.lineWidth = 2;
+            const time = Date.now() * 0.003;
+            for (let i = 1; i <= 6; i++) {
+                let x = (width / 7) * i;
+                let offsetY = Math.sin(time + i) * 15;
+                ctx.beginPath();
+                ctx.moveTo(x, cloudBottom + 30 + offsetY);
+                ctx.lineTo(x, cloudTop + offsetY);
+                ctx.stroke();
+
+                // Arrow head
+                ctx.beginPath();
+                ctx.moveTo(x - 4, cloudTop + 10 + offsetY);
+                ctx.lineTo(x, cloudTop + offsetY);
+                ctx.lineTo(x + 4, cloudTop + 10 + offsetY);
+                ctx.stroke();
+            }
+
+            // Update & Draw Colliding Ice Particles
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Bounce inside cloud bounds
+                if (p.x < 60 || p.x > width - 60) p.vx *= -1;
+                if (p.y < cloudTop || p.y > cloudBottom) p.vy *= -1;
+
+                // Render Particles
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                if (p.type === 'ice') {
+                    ctx.fillStyle = '#e0f2fe';
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fill();
+                }
+
+                // Sparkles on collision
+                if (Math.random() < 0.05) {
+                    ctx.fillStyle = '#fef08a';
+                    ctx.fillRect(p.x + 3, p.y - 3, 2, 2);
+                }
+            });
+        }
+
+        function updateAndDrawStep2() {
+            // Step 2: Charge Separation (+ on top, - at base)
+            charges.forEach(c => {
+                // Smoothly migrate charges to top or bottom
+                c.y += (c.targetY - c.y) * 0.05;
+                c.x += Math.sin(Date.now() * 0.002 + c.pulse) * 0.5;
+
+                const color = c.type === '+' ? '#38bdf8' : '#f59e0b';
+                drawChargeSymbol(c.x, c.y, c.type, color, true);
+            });
+        }
+
+        function updateAndDrawStep3() {
+            // Step 3: Ground Induction
+            updateAndDrawStep2(); // Keep cloud charged
+
+            const cloudBottom = 155;
+            const groundY = height - 50;
+
+            // Draw Electric Field Lines pointing down from Cloud Base
+            ctx.save();
+            ctx.setLineDash([4, 6]);
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.3)';
+            ctx.lineWidth = 1.5;
+
+            for (let x = 80; x < width - 80; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, cloudBottom + 10);
+                ctx.lineTo(x, groundY - 10);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // Repelled (-) charges moving deep underground
+            for (let x = 60; x < width - 60; x += 45) {
+                drawChargeSymbol(x, height - 15, '-', '#64748b');
+            }
+
+            // Induced (+) charges on ground surface
+            for (let x = 40; x < width - 40; x += 30) {
+                drawChargeSymbol(x, groundY - 10, '+', '#f59e0b', true);
+            }
+        }
+
+        function updateAndDrawStep4() {
+            // Step 4: Dielectric Breakdown & Stepped Leaders
+            updateAndDrawStep3();
+
+            const startX = width * 0.5;
+            const startY = 160;
+            const progress = (Math.sin(Date.now() * 0.004) + 1) / 2; // Pulsing breakdown
+
+            // Stepped Leader (Descending Zig-zag Plasma Channel)
+            const points = generateLightningPath(startX, startY, strikeTarget.x, strikeTarget.y - 40, 4);
+            const visibleCount = Math.floor(points.length * progress);
+
+            ctx.save();
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = '#c084fc';
+            ctx.strokeStyle = '#e9d5ff';
+            ctx.lineWidth = 3;
+
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < visibleCount; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.stroke();
+
+            // Upward Streamers
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(strikeTarget.x, strikeTarget.y);
+            ctx.lineTo(strikeTarget.x + (Math.random() - 0.5) * 20, strikeTarget.y - 35);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function updateAndDrawStep5() {
+            // Step 5: Full Return Stroke Discharge & Thunder Shockwave
+            updateAndDrawStep3();
+
+            const startX = width * 0.5;
+            const startY = 150;
+
+            // Generate main return stroke lightning bolt
+            const points = generateLightningPath(startX, startY, strikeTarget.x, strikeTarget.y, 5);
+
+            ctx.save();
+            // Outer Glowing Plasma Aura
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = '#38bdf8';
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            points.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.stroke();
+
+            // Inner Blinding White Channel Core
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ffffff';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            points.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.stroke();
+            ctx.restore();
+
+            // Expanding Concentric Sound Shockwaves (Thunder)
+            shockwaves.forEach((sw, index) => {
+                sw.radius += 4;
+                sw.alpha -= 0.015;
+
+                if (sw.alpha > 0) {
+                    ctx.save();
+                    ctx.strokeStyle = `rgba(245, 158, 11, ${sw.alpha})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                } else {
+                    shockwaves.splice(index, 1);
+                }
+            });
+
+            // Handle Screen Flash Decay
+            if (dischargeFlash > 0) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${dischargeFlash})`;
+                ctx.fillRect(0, 0, width, height);
+                dischargeFlash -= 0.04;
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            drawBackground();
+            drawCloud();
+            drawTerrain();
+
+            // Execute specific stage animation logic
+            switch (currentStep) {
+                case 1:
+                    updateAndDrawStep1();
+                    break;
+                case 2:
+                    updateAndDrawStep2();
+                    break;
+                case 3:
+                    updateAndDrawStep3();
+                    break;
+                case 4:
+                    updateAndDrawStep4();
+                    break;
+                case 5:
+                    updateAndDrawStep5();
+                    break;
+            }
+
+            animationFrameId = requestAnimationFrame(render);
+        }
+
+        function setStep(step) {
+            currentStep = step;
+            updateUI();
+
+            if (currentStep === 5) {
+                triggerStrike();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                setStep(currentStep - 1);
+            }
+        }
+
+        function nextStep() {
+            if (currentStep < 5) {
+                setStep(currentStep + 1);
+            } else {
+                setStep(1);
+            }
+        }
+
+        function triggerStrike() {
+            dischargeFlash = 0.6;
+            shockwaves.push({
+                x: strikeTarget.x,
+                y: strikeTarget.y,
+                radius: 10,
+                alpha: 1.0
+            });
+
+            playThunderSound();
+
+            // Trigger screen shake UI animation
+            const container = document.getElementById('mainContainer');
+            container.classList.remove('shake-effect');
+            void container.offsetWidth; // Force reflow
+            container.classList.add('shake-effect');
+        }
+
+        function triggerManualStrike() {
+            setStep(5);
+        }
+
+        function toggleAutoPlay() {
+            isAutoPlaying = !isAutoPlaying;
+            const btn = document.getElementById('autoPlayBtn');
+            const text = document.getElementById('autoPlayText');
+
+            if (isAutoPlaying) {
+                text.textContent = 'Pausar Animação';
+                btn.classList.add('glow-cyan');
+                runAutoPlay();
+            } else {
+                text.textContent = 'Reprodução Automática';
+                btn.classList.remove('glow-cyan');
+                if (autoPlayTimer) clearInterval(autoPlayTimer);
+            }
+        }
+
+        function runAutoPlay() {
+            if (autoPlayTimer) clearInterval(autoPlayTimer);
+            autoPlayTimer = setInterval(() => {
+                if (!isAutoPlaying) return;
+                if (currentStep < 5) {
+                    setStep(currentStep + 1);
+                } else {
+                    setStep(1);
+                }
+            }, 4000);
+        }
+
+        function updateUI() {
+            const data = stepData[currentStep];
+
+            // Text Updates
+            document.getElementById('stepBadge').textContent = data.badge;
+            document.getElementById('stepTitle').textContent = data.title;
+            
+            const statusEl = document.getElementById('physicsStatus');
+            statusEl.textContent = data.status;
+            statusEl.className = `text-xs font-mono flex items-center gap-1 ${data.statusColor}`;
+
+            document.getElementById('stepDescription').textContent = data.description;
+            document.getElementById('metricVoltage').textContent = data.voltage;
+            document.getElementById('metricEField').textContent = data.eField;
+            document.getElementById('metricTemp').textContent = data.temp;
+
+            const airStateEl = document.getElementById('metricAirState');
+            airStateEl.textContent = data.airState;
+            airStateEl.className = `text-sm font-bold font-mono ${data.airStateColor}`;
+
+            document.getElementById('stepKeyTakeaway').textContent = data.takeaway;
+            document.getElementById('triviaText').textContent = data.trivia;
+
+            // Step Navigation Pill Active States
+            document.querySelectorAll('.step-btn').forEach((btn, idx) => {
+                const stepNum = idx + 1;
+                if (stepNum === currentStep) {
+                    btn.className = "step-btn py-2 px-1 text-center rounded-xl text-xs font-bold transition-all duration-300 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 glow-cyan";
+                } else {
+                    btn.className = "step-btn py-2 px-1 text-center rounded-xl text-xs font-semibold transition-all duration-300 bg-slate-800/50 text-slate-400 hover:bg-slate-800 border border-transparent";
+                }
+            });
+        }
+
+        // Allow user to click anywhere on ground to select strike point
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            // Restrict target to ground area
+            if (clickY > height * 0.5) {
+                strikeTarget = { x: clickX, y: Math.min(clickY, height - 30) };
+                setStep(5);
+            }
+        });
+
+        // Window resize handler
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initialization on Load
+        window.onload = () => {
+            resizeCanvas();
+            updateUI();
+            render();
+        };
+    </script>
+</body>
+</html>
